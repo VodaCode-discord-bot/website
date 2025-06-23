@@ -1,0 +1,49 @@
+app.post("/login", async (req, res) => {  // Changed to async
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  
+  try {
+    // 1. Validate input
+    const { username, password } = req.body;
+    if (!username || !password) {
+      logFailedAttempt('empty credentials', ip);
+      return sendLoginError(res, "Gebruikersnaam en wachtwoord zijn verplicht");
+    }
+
+    // 2. Load users data
+    const users = fs.existsSync(USERS_FILE) 
+      ? JSON.parse(fs.readFileSync(USERS_FILE))
+      : {};
+
+    // 3. Check if user exists
+    if (!users[username]) {
+      logFailedAttempt(username, ip, 'unknown user');
+      return sendLoginError(res, "Ongeldige gebruikersnaam of wachtwoord");
+    }
+
+    // 4. Verify password with bcrypt
+    const passwordMatch = await bcrypt.compare(password, users[username]);
+    
+    if (passwordMatch) {
+      // 5. Successful login
+      req.session.username = username;
+      req.session.regenerate(() => {  // Renew session ID
+        logSuccessfulLogin(username, ip);
+        return res.redirect(302, "/");
+      });
+    } else {
+      // 6. Failed login
+      logFailedAttempt(username, ip, 'wrong password');
+      sendLoginError(res, "Ongeldige gebruikersnaam of wachtwoord");
+    }
+
+  } catch (error) {
+    console.error(`\x1b[31m[LOGIN ERROR]\x1b[0m`, error);
+    fs.appendFileSync(LOGIN_LOG_FILE, `[ERROR] ${new Date().toLocaleString()} | ${error.message}\n`);
+    res.status(500).send(
+      htmlWrapper(
+        "Serverfout",
+        `<p><center>❌ Er ging iets mis tijdens het inloggen. Probeer later opnieuw.</center></p>`
+      )
+    );
+  }
+});

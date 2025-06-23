@@ -1,0 +1,154 @@
+app.get('/', isAuthenticated, (req, res) => {
+    res.send(htmlWrapper('Uploader', `
+        <h1><center>Welkom ${req.session.username}!</center></h1>
+        
+        <div class="upload-container">
+            <div class="file-selector">
+                <div class="file-header" onclick="toggleFileList()">
+                    📁 Geselecteerde bestanden: <span id="fileCount">0</span>
+                </div>
+                <div class="file-list" id="fileList"></div>
+                <button type="button" class="btn add-files-btn" onclick="document.getElementById('fileInput').click()">
+                    ➕ Bestanden toevoegen
+                </button>
+            </div>
+
+            <div id="progressContainer" class="hidden">
+                <div class="progress-bar">
+                    <div id="progressBar" class="progress"></div>
+                </div>
+                <div id="progressText" class="progress-text">0%</div>
+            </div>
+
+            <div id="uploadError" class="error-message hidden"></div>
+            
+            <button type="button" class="btn upload-btn" onclick="startUpload()">
+                📤 Uploaden
+            </button>
+        </div>
+
+        <input type="file" id="fileInput" multiple hidden>
+
+        <script>
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            const fileCount = document.getElementById('fileCount');
+            let files = [];
+
+            // Bestandsselectie handler
+            fileInput.addEventListener('change', (e) => {
+                // Voeg nieuwe bestanden toe aan bestaande lijst
+                    files = [...files, ...Array.from(e.target.files)];
+                updateFileList();
+                
+                    // Reset de input om nieuwe bestanden toe te staan
+                e.target.value = '';
+            });
+
+            // Update bestandsoverzicht met verwijderknoppen
+            function updateFileList() {
+                fileList.innerHTML = files.map((file, index) => \`
+                    <div class="file-item">
+                        <span>\${file.name}</span>
+                        <span class="file-size">(\${formatFileSize(file.size)})</span>
+                        <button class="remove-btn" onclick="removeFile(\${index})">❌</button>
+                    </div>
+                \`).join('');
+                
+                fileCount.textContent = files.length;
+            }
+
+            // Bestandsgrootte formatteren
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // Verwijder bestand
+            function removeFile(index) {
+                files.splice(index, 1);
+                updateFileList();
+                
+                // Update de file input zonder DataTransfer
+                const newFileList = new DataTransfer();
+                files.forEach(file => newFileList.items.add(file));
+                fileInput.files = newFileList.files;
+                }
+
+            // Upload functie met progress fix
+            function startUpload() {
+                const errorDiv = document.getElementById('uploadError');
+                const progressBar = document.getElementById('progressBar');
+                const progressText = document.getElementById('progressText');
+                const progressContainer = document.getElementById('progressContainer');
+
+                // Reset UI
+                errorDiv.classList.add('hidden');
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                progressContainer.classList.remove('hidden');
+
+                if (files.length === 0) {
+                    showError('Selecteer eerst bestanden!');
+                    progressContainer.classList.add('hidden');
+                    return;
+                }
+
+                const xhr = new XMLHttpRequest();
+                const formData = new FormData();
+                files.forEach(file => formData.append('files', file));
+
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.transition = 'none';
+                        progressBar.style.width = \`\${percent}%\`;
+                        void progressBar.offsetWidth; // Forceer reflow
+                        progressBar.style.transition = 'width 0.3s ease';
+                        progressText.textContent = \`\${percent}% voltooid\`;
+                    }
+                });
+
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        alert('✅ Upload voltooid!');
+                        files = [];
+                        updateFileList();
+                    } else {
+                        showError(xhr.responseText || 'Upload mislukt');
+                    }
+                    progressContainer.classList.add('hidden');
+                });
+
+                xhr.addEventListener('error', () => {
+                    showError('Netwerkfout');
+                    progressContainer.classList.add('hidden');
+                });
+
+                xhr.open('POST', '/upload');
+                xhr.send(formData);
+            }
+
+            function showError(message) {
+                const errorDiv = document.getElementById('uploadError');
+                errorDiv.textContent = \`❌ \${message}\`;
+                errorDiv.classList.remove('hidden');
+            }
+
+            function toggleFileList() {
+                fileList.classList.toggle('visible');
+            }
+        </script>
+
+        <div class="nav-links">
+            <a href="/myuploads"><center>📂 Uploads</center></a>
+            <br>
+            <a href="/logout"><center>🚪 Uitloggen</center></a>
+            <br>
+            ${req.session.username === 'admin' ? '<a href="/admin"><center>📋 Adminpaneel</center></a>' : ''}
+        </div>
+    `));
+});

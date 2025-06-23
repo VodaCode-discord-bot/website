@@ -1,0 +1,48 @@
+{
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "crypto": "^1.0.1",
+    "csurf": "^1.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "localtunnel": "^1.8.3",
+    "multer": "^1.4.5-lts.2",
+    "node-fetch": "^2.6.7",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "pg": "^8.10.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.32.1",
+    "sequelize-cli": "^6.6.0",
+    "systeminformation": "^5.18.0",
+    "winston": "^3.8.2",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "name": "my-express-app",
+  "version": "1.0.0",
+  "description": "A simple Express.js application with various middleware and utilities.",
+  "main": "server.js",
+  "author": "VodaCode",
+  "keywords": [
+    "express",
+    "middleware",
+    "authentication",
+    "logging",
+    "database"
+  ],
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/your-repo.git"
+  }
+}
